@@ -47,10 +47,14 @@ async def sync(player_id: str, data: dict):
     with LOCK:
         is_new = player_id not in players
 
+        # Extract name and color from the rig if present
+        name = data.get("name", "Player")
+        color = f"#{int(data.get('r', 1)*255):02x}{int(data.get('g',1)*255):02x}{int(data.get('b',1)*255):02x}"
+
         players[player_id] = {
-            "name": data.get("name", "Player"),
-            "color": data.get("color", "#ffffff"),
-            "rig": data.get("rig", {}),
+            "name": name,
+            "color": color,
+            "rig": data,  # store the full RigNetData dict
             "last_seen": now
         }
 
@@ -68,7 +72,6 @@ async def sync(player_id: str, data: dict):
         }
 
     return {"players": others}
-
 
 @app.get("/status")
 async def status():
@@ -94,3 +97,4 @@ async def root():
         "status": "Gray Server Running",
         "players": len(players)
     }
+
