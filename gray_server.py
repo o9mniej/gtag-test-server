@@ -32,47 +32,55 @@ def cleanup_loop():
             ]
 
             for pid in dead:
-                name = players[pid]["name"]
-                print(f"[LEAVE] {name} ({pid})")
+                print(f"[LEAVE] {players[pid]['name']} ({pid})")
                 del players[pid]
 
 
 threading.Thread(target=cleanup_loop, daemon=True).start()
 
 
+# -------------------------------
+# POST = SEND YOUR DATA
+# -------------------------------
 @app.post("/sync/{player_id}")
-async def sync(player_id: str, data: dict):
+async def sync_post(player_id: str, data: dict):
     now = time.time()
 
     with LOCK:
         is_new = player_id not in players
 
-        # Extract name and color from the rig if present
         name = data.get("name", "Player")
-        color = f"#{int(data.get('r', 1)*255):02x}{int(data.get('g',1)*255):02x}{int(data.get('b',1)*255):02x}"
 
         players[player_id] = {
             "name": name,
-            "color": color,
-            "rig": data,  # store the full RigNetData dict
+            "rig": data,
             "last_seen": now
         }
 
     if is_new:
-        print(f"[JOIN] {players[player_id]['name']} ({player_id})")
-    else:
-        print(f"[UPDATE] {players[player_id]['name']}")
+        print(f"[JOIN] {name} ({player_id})")
 
-    # return everyone except the caller
+    return {"ok": True}
+
+
+# -------------------------------
+# GET = RECEIVE OTHER PLAYERS
+# -------------------------------
+@app.get("/sync/{player_id}")
+async def sync_get(player_id: str):
     with LOCK:
         others = {
-            pid: pdata
+            pid: pdata["rig"]
             for pid, pdata in players.items()
             if pid != player_id
         }
 
     return {"players": others}
 
+
+# -------------------------------
+# DEBUG / STATUS
+# -------------------------------
 @app.get("/status")
 async def status():
     now = time.time()
@@ -82,9 +90,8 @@ async def status():
             "players": [
                 {
                     "name": pdata["name"],
-                    "color": pdata["color"],
                     "secondsAgo": round(now - pdata["last_seen"], 2),
-                    "rig": pdata["rig"]  # <-- added rig info here
+                    "rig": pdata["rig"]
                 }
                 for pdata in players.values()
             ]
@@ -97,4 +104,3 @@ async def root():
         "status": "Gray Server Running",
         "players": len(players)
     }
-
