@@ -80,7 +80,8 @@ async def status():
                 {
                     "name": pdata["name"],
                     "color": pdata["color"],
-                    "secondsAgo": round(now - pdata["last_seen"], 2)
+                    "secondsAgo": round(now - pdata["last_seen"], 2),
+                    "rig": pdata["rig"]  # <-- added rig info here
                 }
                 for pdata in players.values()
             ]
